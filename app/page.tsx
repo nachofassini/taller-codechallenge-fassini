@@ -1,101 +1,177 @@
-import Image from "next/image";
+"use client";
+
+import { Divider } from "@/app/_components/Divider";
+import { Payment, SearchFilters } from "./types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Label, Spinner, Table, TextInput } from "flowbite-react";
+
+const mockPayments: Payment[] = [
+  { id: "1", date: "2024-10-01", description: "Payment 1", amount: 100 },
+  { id: "2", date: "2024-10-02", description: "Payment 2", amount: 200 },
+  { id: "3", date: "2024-10-03", description: "Payment 3", amount: 300 },
+  { id: "4", date: "2024-10-04", description: "Payment 4", amount: 400 },
+  { id: "5", date: "2024-10-05", description: "Payment 5", amount: 500 },
+  { id: "6", date: "2024-10-06", description: "Payment 6", amount: 600 },
+  { id: "7", date: "2024-10-07", description: "Payment 7", amount: 700 },
+  { id: "8", date: "2024-10-08", description: "Payment 8", amount: 800 },
+  { id: "9", date: "2024-10-09", description: "Payment 9", amount: 900 },
+  { id: "10", date: "2024-10-10", description: "Payment 10", amount: 1000 },
+  { id: "11", date: "2024-11-01", description: "Payment 11", amount: 100 },
+  { id: "12", date: "2024-11-02", description: "Payment 12", amount: 200 },
+  { id: "13", date: "2024-11-03", description: "Payment 13", amount: 300 },
+  { id: "14", date: "2024-11-04", description: "Payment 14", amount: 400 },
+  { id: "15", date: "2024-11-05", description: "Payment 15", amount: 500 },
+  { id: "16", date: "2024-11-06", description: "Payment 16", amount: 600 },
+  { id: "17", date: "2024-11-07", description: "Payment 17", amount: 700 },
+  { id: "18", date: "2024-11-08", description: "Payment 18", amount: 800 },
+  { id: "19", date: "2024-11-09", description: "Payment 19", amount: 900 },
+  { id: "20", date: "2024-11-10", description: "Payment 20", amount: 1000 },
+];
+
+const mockedPaymentsFetch = async (): Promise<Payment[]> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(mockPayments);
+    }, 3000);
+  });
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const formRef = useRef<HTMLFormElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const fetchPayments = useCallback(async () => {
+    setIsError(false);
+    setLoading(true);
+    try {
+      const payments = await mockedPaymentsFetch();
+      setPayments(payments);
+    } catch (error) {
+      console.error(error);
+      setIsError(true);
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const filteredPayments = useMemo(() => {
+    return payments?.filter((payment) => {
+      const paymentDate = new Date(payment.date);
+      if (searchFilters.from && searchFilters.to) {
+        return (
+          paymentDate >= searchFilters.from && paymentDate <= searchFilters.to
+        );
+      } else if (searchFilters.from) {
+        return paymentDate >= searchFilters.from;
+      } else if (searchFilters.to) {
+        return paymentDate <= searchFilters.to;
+      }
+      return true;
+    });
+  }, [payments, searchFilters]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  const onSearch = (formData: FormData) => {
+    const from = formData.get("from") as string;
+    const to = formData.get("to") as string;
+    setSearchFilters({
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+    });
+  };
+
+  const cleanSearch = () => {
+    formRef.current?.reset();
+    setSearchFilters({});
+  };
+
+  return (
+    <div className="w-full" suppressHydrationWarning>
+      <section
+        id="header"
+        className="flex flex-col md:flex-row justify-between md:items-center"
+      >
+        <h2 className="text-xl md:text-2xl font-bold">Payments</h2>
+
+        <Divider className="md:hidden" />
+
+        {/* Search by date ranges */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSearch(new FormData(e.target as HTMLFormElement));
+          }}
+          id="search"
+          className="flex gap-4 justify-center items-center"
+          ref={formRef}
+        >
+          <div className="flex flex-col md:flex-row gap-4 flex-grow">
+            <div className="flex gap-4 justify-between items-center">
+              <Label htmlFor="from">From</Label>
+              <TextInput
+                type="date"
+                name="from"
+                className="flex-1 md:flex-grow-0"
+              />
+            </div>
+            <div className="flex gap-4 justify-between items-center">
+              <Label htmlFor="to">To</Label>
+              <TextInput
+                type="date"
+                name="to"
+                className="flex-1 md:flex-grow-0"
+              />
+            </div>
+          </div>
+          <div className="flex gap-4 flex-col md:flex-row">
+            <Button type="submit">Filter</Button>
+            {(searchFilters.from || searchFilters.to) && (
+              <Button outline color="purple" onClick={cleanSearch}>
+                Clean
+              </Button>
+            )}
+          </div>
+        </form>
+      </section>
+      <Divider />
+      {loading ? (
+        <div className="text-center">
+          <Spinner />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      ) : isError ? (
+        <div>
+          <p>Error loading payments</p>
+          <Button onClick={fetchPayments}>Retry</Button>
+        </div>
+      ) : filteredPayments?.length > 0 ? (
+        <div className="overflow-x-auto">
+          <Table striped>
+            <Table.Head>
+              <Table.HeadCell>Date</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Amount</Table.HeadCell>
+            </Table.Head>
+            <Table.Body>
+              {filteredPayments?.map((payment) => (
+                <Table.Row key={payment.id}>
+                  <Table.Cell>{payment.date}</Table.Cell>
+                  <Table.Cell>{payment.description}</Table.Cell>
+                  <Table.Cell>{payment.amount}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </div>
+      ) : (
+        <p>No payments found</p>
+      )}
     </div>
   );
 }
